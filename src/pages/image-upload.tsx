@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 import { Upload, X } from 'lucide-react';
+import { createDropdownMenuScope } from '@radix-ui/react-dropdown-menu';
 
 export function ImageUpload() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -41,19 +42,49 @@ export function ImageUpload() {
     setUploading(true);
     setProgress(0);
 
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setUploading(false);
-          toast.success('¡Archivos subidos con éxito!');
-          setSelectedFiles([]);
-          setPreviews([]);
-          return 0;
-        }
-        return prev + 10;
+    const formData = new FormData();
+
+    selectedFiles.forEach((file) => {
+      formData.append('files', file);
+    });
+
+    try {
+      const response = await fetch('http://localhost:3001/api/usuarios/upload', {
+        method: 'POST',
+        body: formData,
       });
-    }, 500);
+
+      if (!response.ok) {
+        throw new Error('Error al subir archivos');
+      }
+
+      const data = await response.json();
+      console.log(data);
+
+      setSelectedFiles([])
+      setPreviews([])
+
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setUploading(false);
+      setProgress(100);
+      toast.success('¡Archivos subidos con éxito!');
+    }
+
+    // const interval = setInterval(() => {
+    //   setProgress((prev) => {
+    //     if (prev >= 100) {
+    //       clearInterval(interval);
+    //       setUploading(false);
+    //       toast.success('¡Archivos subidos con éxito!');
+    //       setSelectedFiles([]);
+    //       setPreviews([]);
+    //       return 0;
+    //     }
+    //     return prev + 10;
+    //   });
+    // }, 500);
   };
 
   return (
