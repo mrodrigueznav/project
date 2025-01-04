@@ -37,10 +37,38 @@ export function BasicForms() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     console.log(values);
-    toast.success('¡Formulario enviado con éxito!');
-    form.reset();
+    const payload = {
+      nombre: values.name,
+      correo: values.email,
+      mensaje: values.message,
+    };
+    try {
+      const response = await fetch('http://localhost:3001/api/usuarios', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al enviar el formulario.');
+      }
+
+      const data = await response.json();
+      console.log(data);
+
+      toast.success('¡Formulario enviado con éxito!');
+      form.reset();
+
+    } catch (error) {
+
+      console.error(error);
+      toast.error('Error al enviar el formulario.');
+      
+    }
   }
 
   return (

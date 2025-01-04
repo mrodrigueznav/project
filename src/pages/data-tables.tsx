@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -18,30 +18,29 @@ import {
 import { Button } from '@/components/ui/button';
 import { Edit2, Trash2 } from 'lucide-react';
 
-type User = {
-  id: number;
-  name: string;
-  email: string;
-  role: string;
-};
-
-const mockUsers: User[] = Array.from({ length: 50 }, (_, i) => ({
-  id: i + 1,
-  name: `Usuario ${i + 1}`,
-  email: `usuario${i + 1}@ejemplo.com`,
-  role: i % 2 === 0 ? 'Administrador' : 'Usuario',
-}));
-
 export function DataTables() {
+  const [users, setUsers] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
   const itemsPerPage = 10;
-  const totalPages = Math.ceil(mockUsers.length / itemsPerPage);
 
-  const getCurrentPageData = () => {
-    const start = (currentPage - 1) * itemsPerPage;
-    const end = start + itemsPerPage;
-    return mockUsers.slice(start, end);
-  };
+  // Fetch users from the API
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await fetch(
+          `http://localhost:3001/api/usuarios?page=${currentPage}&limit=${itemsPerPage}`
+        );
+        const data = await response.json();
+        setUsers(data.usuarios); // Set the paginated user data
+        setTotalPages(Math.ceil(data.total / itemsPerPage)); // Calculate total pages
+      } catch (error) {
+        console.error('Error fetching users:', error);
+      }
+    };
+
+    fetchUsers();
+  }, [currentPage]);
 
   return (
     <div className="space-y-6">
@@ -59,17 +58,17 @@ export function DataTables() {
               <TableHead>ID</TableHead>
               <TableHead>Nombre</TableHead>
               <TableHead>Correo</TableHead>
-              <TableHead>Rol</TableHead>
+              <TableHead>Mensaje</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {getCurrentPageData().map((user) => (
+            {users.map((user) => (
               <TableRow key={user.id}>
                 <TableCell>{user.id}</TableCell>
-                <TableCell>{user.name}</TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell>{user.role}</TableCell>
+                <TableCell>{user.nombre}</TableCell>
+                <TableCell>{user.correo}</TableCell>
+                <TableCell>{user.mensaje}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end space-x-2">
                     <Button variant="ghost" size="icon">
