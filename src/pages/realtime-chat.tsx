@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Send } from 'lucide-react';
+import { io, Socket } from 'socket.io-client';
 
 type Message = {
   id: string;
@@ -18,47 +19,55 @@ export function RealtimeChat() {
   const [connected, setConnected] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const socketRef = useRef<Socket | null>(null);
+
   useEffect(() => {
-    const timer = setTimeout(() => {
+    // Connect to the WebSocket server
+    const socket = io('http://localhost:3001'); // Match your server's URL
+    socketRef.current = socket;
+
+    socket.on('connect', () => {
+      console.log('Connected to WebSocket server');
       setConnected(true);
-      addMessage({
-        id: '1',
-        text: '¡Bienvenido al chat! Esta es una simulación de mensajería en tiempo real.',
-        sender: 'Sistema',
-        timestamp: new Date(),
-      });
-    }, 1000);
+    });
 
-    return () => clearTimeout(timer);
-  }, []);
+    socket.on('disconnect', () => {
+      console.log('Disconnected from WebSocket server');
+      setConnected(false);
+    });
 
-  const addMessage = (message: Message) => {
-    setMessages((prev) => [...prev, message]);
-    setTimeout(() => {
+    socket.on('receiveMessage', (message: Message) => {
+      setMessages((prev) => [...prev, message]);
       scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
-  };
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('Connection error:', error);
+      setConnected(false);
+    });
+
+    // Cleanup on unmount
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() || !socketRef.current) return;
 
-    addMessage({
+    const message: Message = {
       id: Date.now().toString(),
       text: newMessage,
       sender: 'Tú',
       timestamp: new Date(),
-    });
+    };
 
-    setTimeout(() => {
-      addMessage({
-        id: (Date.now() + 1).toString(),
-        text: `Eco: ${newMessage}`,
-        sender: 'Bot',
-        timestamp: new Date(),
-      });
-    }, 1000);
+    // Emit the message to the server
+    socketRef.current.emit('sendMessage', message);
 
+    // Optimistically update the local state
+    setMessages((prev) => [...prev, message]);
     setNewMessage('');
   };
 
@@ -96,7 +105,7 @@ export function RealtimeChat() {
                   <p className="text-sm font-medium mb-1">{message.sender}</p>
                   <p>{message.text}</p>
                   <p className="text-xs opacity-70 mt-1">
-                    {message.timestamp.toLocaleTimeString()}
+                    {new Date(message.timestamp).toLocaleTimeString()}
                   </p>
                 </div>
               </div>
